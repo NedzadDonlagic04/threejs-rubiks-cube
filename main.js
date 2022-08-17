@@ -162,9 +162,13 @@ const animation = () => {
 
 /* Event listeners below this point */
 
+// Adding an event listener to the window, that will whenever it's resized resize the 3D area we're viewing
 window.addEventListener('resize', () => {
+    // Changing the camera's aspect ration
     camera.aspect = window.innerWidth/window.innerHeight;
+    // Whenever a change is made to the camera after the initial constructor call the updateProjectionMatrix needs to be called to update it
     camera.updateProjectionMatrix();
+
     renderer.setSize(window.innerWidth,window.innerHeight);
     renderer.render(scene, camera);
 });
