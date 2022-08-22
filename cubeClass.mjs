@@ -22,9 +22,13 @@ export class Cube{
         // Creating our box
         const box = new THREE.Mesh(geometry, materials);
         
+        // Creating the box that will represent our edges
+        // The dimensions are bigger so they stick out easier
+        const edgeGeometry = new THREE.BoxGeometry(1.01, 1.01, 1.01);
+
         // Creating the edges of the cube
-        const edges = new THREE.EdgesGeometry(geometry);
-        const edgeMaterial = new THREE.LineBasicMaterial({ color: '#000000', linewidth: 10 });
+        const edges = new THREE.EdgesGeometry(edgeGeometry);
+        const edgeMaterial = new THREE.LineBasicMaterial({ color: '#000000', linewidth: 5 });
         const lines = new THREE.LineSegments(edges, edgeMaterial);
 
         // Combining the box and the edges to get the cube
