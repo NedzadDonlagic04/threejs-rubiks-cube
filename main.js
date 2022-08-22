@@ -20,6 +20,11 @@ const renderer = new THREE.WebGLRenderer({
     canvas: document.querySelector('#bg')
 });
 
+// Disabling the mousewheel from allowing zooming in and out
+renderer.domElement.addEventListener('wheel', e => {
+    e.preventDefault();
+}, {passive: false});
+
 // Setting the size of the renderer, it's the same as the aspect ratio of the camera
 renderer.setSize(window.innerWidth,window.innerHeight);
 
