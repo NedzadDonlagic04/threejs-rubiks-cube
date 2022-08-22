@@ -20,11 +20,6 @@ const renderer = new THREE.WebGLRenderer({
     canvas: document.querySelector('#bg')
 });
 
-// Disabling the mousewheel from allowing zooming in and out
-document.addEventListener('wheel', e => {
-    e.preventDefault();
-}, {passive: false});
-
 // Setting the size of the renderer, it's the same as the aspect ratio of the camera
 renderer.setSize(window.innerWidth,window.innerHeight);
 
@@ -59,6 +54,10 @@ axesHelper.visible = false;
 // Creating an OrbitControls object which will represent controls that allow movement of the camera
 // As argument to the constructor it takes the camera and the document element of the renderer
 const controls = new OrbitControls(camera, renderer.domElement);
+
+// Disabling the user ability to zoom in and out
+controls.enableZoom = false;
+controls.enablePan = false;
 
 // Setting the position of our camera
 camera.position.set(5, 3, 0);
