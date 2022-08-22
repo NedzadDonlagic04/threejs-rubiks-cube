@@ -21,7 +21,7 @@ const renderer = new THREE.WebGLRenderer({
 });
 
 // Disabling the mousewheel from allowing zooming in and out
-renderer.domElement.addEventListener('wheel', e => {
+document.addEventListener('wheel', e => {
     e.preventDefault();
 }, {passive: false});
 
