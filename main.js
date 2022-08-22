@@ -3,8 +3,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
 import {GUI} from 'dat.gui';
 import * as TWEEN from '@tweenjs/tween.js';
-import { RubiksCube } from './rubiksClass.mjs';
-
+import {RubiksCube} from './rubiksCubeClass.mjs';
 
 /* First Step: Creating the 3 objects that will represent the base of our 3D section of the website */
 
@@ -24,12 +23,12 @@ const renderer = new THREE.WebGLRenderer({
 // Setting the size of the renderer, it's the same as the aspect ratio of the camera
 renderer.setSize(window.innerWidth,window.innerHeight);
 
-
-/* Second Step: Creating all the cubes we'll need to represent the 3x3x3 rubik's cube and adding helpers */
+/* Second Step: Creating all the rubik's cube using an imported class */
 
 // Making an instance of the class RubiksCube that I defined in another file
-// To it's constructor we are passing the scene to which it will add the cube, the side of the cube's cubes, and the location they will be placed on the x, y and z axes
-const rubiksCube = new RubiksCube(scene, 0.5, 0.52);
+// To it's constructor we are passing the scene which it will use to add the cube to the scene
+
+const r = new RubiksCube(scene);
 
 /* Helper Section */
 // In this section I will keep the temporary helpers which don't affect the functionality of the code just add extra visual help to the 3D canvas
@@ -41,32 +40,33 @@ const rubiksCube = new RubiksCube(scene, 0.5, 0.52);
 // z axis is blue
 // ^Leaving this here because I keep forgetting
 
-const axesHelper = new THREE.AxesHelper(5);
+const axesHelper = new THREE.AxesHelper(10);
 scene.add(axesHelper);
+
+// It's the 22nd of August, 2AM and I am done with this project, thus I will turn off the axesHelper object unless someone turns it on themselves from the gui
+axesHelper.visible = false;
 
 /* Helper Section End */
 
 
-/* Third Step: Creating a way for our camera to move, a gui to allow us to move to a specific side of the cube and some animation to make it look more smooth */
+/* Third Step: Creating a way for our camera to move, a gui that contains folders for certain actions like moving to a specific side of the cube,coloring it and solving it */
 
 // Creating an OrbitControls object which will represent controls that allow movement of the camera
 // As argument to the constructor it takes the camera and the document element of the renderer
 const controls = new OrbitControls(camera, renderer.domElement);
 
 // Setting the position of our camera
-camera.position.set(0, 4, 0);
+camera.position.set(5, 3, 0);
 
 // Making an arrow function that will be used to create our tween
 // To quote the documentation
 // "A tween (from in-between) is a concept that allows you to change the values of the properties of an object in a smooth way"
 // And it is exactly what we are doing here for the passed coordinates to where we want the camera to be at the end of the animation we will take the current position and slightly shift it little by little until it gets to the desired coordinate
 const makeTween = (posX, posY, posZ) => {
-
-    const camPos = camera.position;
     
     // Creating our tween which is an instance of the Tween class
     // It's constructor takes the starting coordinates and using the to method we can add the ending coordinates as well as the delay for the animation
-    const tween = new TWEEN.Tween({x: camPos.x, y: camPos.y, z: camPos.z}).to({x: posX, y: posY, z: posZ}, 500);
+    const tween = new TWEEN.Tween(camera.position).to({x: posX, y: posY, z: posZ}, 500);
     
     // In order to see these changes we need to update them little by little on the camera, using the onUpdate method we can pass a callback which will be called each time the update function is called
     tween.onUpdate( ({
@@ -85,22 +85,22 @@ const makeTween = (posX, posY, posZ) => {
 // Each arrow function will call the previously made makeTween function with just different coordinates
 const sides = {
     top: () => {
-        makeTween(0, 4, 0);
+        makeTween(2, 6, 0);
     },
     bottom: () => {
-        makeTween(0, -4, 0);
+        makeTween(-2, -6, 0);
     },
     front: () => {
-        makeTween(4, 0, 0);
+        makeTween(6, 2, 0);
     },
     back: () => {
-        makeTween(-4, 0, 0);
+        makeTween(-6, 2, 0);
     },
     left: () => {
-        makeTween(0, 0, 4);
+        makeTween(0, 2, 6);
     },
     right: () => {
-        makeTween(0, 0, -4);
+        makeTween(0, 2, -6);
     }
 };
 
@@ -127,18 +127,19 @@ changePos.add(sides, 'right').name('Right Side');
 // As previously mentioned the action type is based on the initial value we pass, since this property is a boolean it turns it into a checkbox
 toggleOptions.add(axesHelper, 'visible').name('Toggle Axes');
 
-// By default our gui will be closed
-gui.close();
+// By default our gui will be open along with both folders
+gui.open();
+changePos.open();
+toggleOptions.open();
 
+/* Forth Step: Using a mock api to let us test how the rubik's cube would color itself and solve itself based on json data it receives */
 
-/* Forth Step: Using a test api to help us mimic the way it would be received in practice */
-
-// Defining an async arrow function that will have a parameter called index
+// Defining an async arrow function that will have a parameter called index and url (which it will fetch the json from)
 // It will first use the fetch api to send a request to an api, take the response and check is it ok
 // If so it will return the json object, if not it will return a Promise.reject() object which will trigger the catch block
 // Lastly we check is the json undefined, if not we will return the given part of the json based on the passed index
-const getter = async index => {
-    const json = await fetch('https://62e596abde23e2637921e0e5.mockapi.io/colors')
+const getter = async (index, url) => {
+    const json = await fetch(url)
         .then( response => {
             if(response.ok)
             {
@@ -154,21 +155,33 @@ const getter = async index => {
     }
 }
 
-// Defining an object called fetcher with a get property which will have an async arrow function 
-// Inside, it will go through a for in which it will call the previously defined getter function and receive the proper json which it will pass to the color method of the rubiksCube object which will in turn color all the sides of the rubik's cube properly
-const fetcher = {
-    get: async() => {
-        for(let i=0; i<6; i++)
+// Creating an object called dataObj which will have 2 properties that will contain async functions
+// The paint property if animations are done will call the previously defined getter function 6 times in a for loop and color all sides of the rubik's cube
+// The solve property if animations are done and the cube is colored will give the cube the moves needed for it to solve itself, which it will then perform
+
+const datObj = {
+    paint: async() => {
+        if(r.animationDone)
         {
-            const json = await getter(i);
-            rubiksCube.color(json);
+            for(let i=0; i<6; i++)
+            {
+                const { colors } = await getter(i, 'https://62e596abde23e2637921e0e5.mockapi.io/colors');
+                r.colorCube(colors, i);
+            }
+        }
+    },
+    solve: async() => {
+        if(r.animationDone && r.isColored)
+        {
+            const { solution } = await getter(0, 'https://62e596abde23e2637921e0e5.mockapi.io/solution');
+            r.solveCube(solution);
         }
     }
 }
 
-// Adding the fetcher object as a button in the gui for easier use
-toggleOptions.add(fetcher, 'get').name('Scan');
-
+// Adding the previously defined datObj properties as buttons on the gui
+toggleOptions.add(datObj, 'paint').name('Scan');
+toggleOptions.add(datObj, 'solve').name('Solve');
 
 /* Final Step: Creating the function that will do the animation of the 3D canvas and adding all the event listeners */
 
